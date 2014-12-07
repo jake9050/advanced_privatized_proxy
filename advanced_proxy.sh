@@ -195,7 +195,7 @@ cache_dir ufs /home/squid-cache 20000 16 256 # cache-size in MB, Directory-Struc
 pid_filename /var/run/squid-in.pid
 access_log /var/log/squid/access.squid-in.log
 cache_store_log /var/log/squid/store.squid-in.log
-cache_log /var/log/squid/cache.squid-in.log > /etc/squid/squid.conf
+cache_log /var/log/squid/cache.squid-in.log" > /etc/squid/squid.conf
 }
 
 function squid_cache() {
