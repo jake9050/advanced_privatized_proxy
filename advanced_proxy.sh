@@ -221,8 +221,8 @@ always_direct deny all
 acl apache rep_header Server ^Apache
 broken_vary_encoding allow apache
 forwarded_for off
-coredump_dir /home/squid-cache # where squid stores the cache
-cache_dir ufs /home/squid-cache 20000 16 256 # cache-size in MB, Directory-Structure 1, Directory-Structure below 1
+coredump_dir /home/squid-cache
+cache_dir ufs /home/squid-cache 20000 16 256
 pid_filename /var/run/squid-in.pid
 access_log /var/log/squid/access.squid-in.log
 cache_store_log /var/log/squid/store.squid-in.log
