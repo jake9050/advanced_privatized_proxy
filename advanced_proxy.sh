@@ -273,7 +273,7 @@ replace_tor_init
 ###Privoxy config
 config_privoxy
 create_privoxy_libs
-replace_privoxyÂ_init
+replace_privoxy_init
 
 ###Squid config
 config_squid
