@@ -227,7 +227,7 @@ cache_dir ufs /home/squid-cache 20000 16 256
 pid_filename /var/run/squid-in.pid
 access_log /var/log/squid/access.squid-in.log
 cache_store_log /var/log/squid/store.squid-in.log
-cache_log /var/log/squid/cache.squid-in.log" > /etc/squid/squid.conf
+cache_log /var/log/squid/cache.squid-in.log" > /etc/squid3/squid.conf
 }
 
 function squid_cache() {
@@ -251,7 +251,7 @@ echo -e "127.0.0.1 localhost
 
 #######Malware domains#######
 function malware() {
-  touch /etc/squid/Malware-domains.txt
+  touch /etc/squid3/Malware-domains.txt
   tar -xzvf update-domains.tar.gz -C /usr/local/bin
   cp res/ml.py /usr/local/bin/
   cp res/update-domains.sh /usr/local/bin/
