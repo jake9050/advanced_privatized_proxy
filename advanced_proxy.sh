@@ -1,5 +1,34 @@
 #!/bin/bash
 
+###This script will setup the squid/privoxy/tor setup i found @
+#
+# http://mightycomputers.wordpress.com/2012/09/10/recently-i-foun/
+#
+# Please read the article and make a backup of your system befor running
+# this script.
+#
+# Make sure you change the ip address for your local network in the squid.conf
+# settings to suit your local config
+#
+# Written and tesrted on Ubuntu server 12.04 LTS
+# Does not work out of the box for 14.04!!
+#
+# After installing test the setup by using these commands @ the terminal:
+#
+# 1 - Register the proxy in your session env
+#
+# export http_proxy='http://ip.of.your.proxy:3400
+#
+# 2 - Query for your ip a few times, result should be a differebt one each time
+#
+# wget -q -O - checkip.dyndns.org | sed -e 's/.*Current IP Address: //' -e 's/<.*$//'
+#
+# 3 - Remove the http_proxy from the env
+#
+# unset http_proxy
+
+
+
 function apt_install() {
   #update apt and install packages
   apt-get update
@@ -16,14 +45,14 @@ function services() {
     #stop services so we can edit configs safely
     echo "Stopping services tor, squid and privoxy"
     service tor $1
-    service squid $1
+    squid3 $1
     service privoxy $1
   fi
 
   if [[ $1 == 'start' ]]; then
     echo "Starting services tor, squid and privoxy"
     service tor $1
-    service squid $1
+    squid3 $1
     service privoxy $1
   fi
 }
@@ -34,8 +63,7 @@ function services() {
 function config_tor() {
   #Goto tor dir and rename original torrc file
   #Uncomment after testing
-#  cd /etc/tor
-#  mv torrc torrc.bak
+  mv /etc/tor/torrc /tmp/torrc.bak
 
   #Tor config file generation
   #Create basic settings for all 8 Tor instances - files torrc-1 to torrc-8
@@ -80,7 +108,7 @@ function create_tor_libs() {
 
 function replace_tor_init() {
   #Make backup copy of original file just in case
-  cp /etc/init.d/tor tor.orig
+  cp /etc/init.d/tor /tmp/tor_init.d.orig
   #Replace contents of file
   cat res/tor.txt > /etc/init.d/tor
 }
@@ -89,8 +117,9 @@ function replace_tor_init() {
 #######Privoxy config#######
 
 function config_privoxy() {
-#  cd /etc/privoxy
-#  mv config config.bak
+
+  #move original config file
+  mv /etc/privoxy/config config.bak
 
   #Privoxy config file generation
   #Create basic settings for all 8 Privoxy instances - files config-1 to config-8
@@ -119,6 +148,9 @@ function create_privoxy_libs() {
  COUNT=1
  while [[ $COUNT -le 8 ]]; do
  install -o privoxy -g nogroup -m 750 -d /var/lib/privoxy$COUNT
+ mkdir /var/log/privoxy$COUNT
+ chown -R privoxy.adm /var/log/privoxy$COUNT
+ chmod -R 644  /var/log/privoxy$COUNT
  ((COUNT++))
  done
 }
@@ -136,13 +168,12 @@ function replace_privoxy_init() {
 
 function config_squid() {
 
-cd /etc/squid
-mv squid.conf squid.bak
+mv /etc/squid3/squid.conf /tmp/squid.bak
 
 echo -e "acl all src all
 acl manager proto cache_object
 acl localhost src 127.0.0.1/32
-acl home_network src 192.168.2.0/24
+acl home_network src 192.168.0.0/24
 acl to_localhost dst 127.0.0.0/8
 acl SSL_ports port 443
 acl Safe_ports port 80 # http
@@ -165,7 +196,7 @@ http_access allow purge localhost
 http_access deny purge
 http_access deny !Safe_ports
 http_access deny CONNECT !SSL_ports
-acl malware_domains url_regex '/etc/squid/Malware-domains.txt'
+acl malware_domains url_regex '/etc/squid3/Malware-domains.txt'
 http_access deny malware_domains
 http_access allow localhost
 http_access deny all
@@ -219,13 +250,12 @@ echo -e "127.0.0.1 localhost
 
 #######Malware domains#######
 function malware() {
-touch /etc/squid/Malware-domains.txt
-cd /tmp
-wget https://dl.dropbox.com/u/27721298/update-domains.tar.gz
-tar -xzvf update-domains.tar.gz -C /usr/local/bin
-cd /usr/local/bin
-chmod +x update-domains.sh
-./update-domains.sh
+  touch /etc/squid/Malware-domains.txt
+  tar -xzvf update-domains.tar.gz -C /usr/local/bin
+  cp res/ml.py /usr/local/bin/
+  cp res/update-domains.sh /usr/local/bin/
+  chmod +x /usr/local/bin/update-domains.sh
+  /usr/local/bin/./update-domains.sh
 }
 
 
