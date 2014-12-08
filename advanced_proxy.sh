@@ -137,6 +137,7 @@ function config_privoxy() {
     LISTEN="listen-address  localhost:${LISTEN[$VAR]}"
     echo $LISTEN >> config-$COUNT
     echo "forward-socks5 / $SOCK ." >> config-$COUNT
+    mkdir /var/log/privoxy$COUNT
   ((COUNT++))
   done
   mv config-* /etc/privoxy/
