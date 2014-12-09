@@ -45,14 +45,14 @@ function services() {
     #stop services so we can edit configs safely
     echo "Stopping services tor, squid and privoxy"
     service tor $1
-    squid3 $1
+    service squid3 $1
     service privoxy $1
   fi
 
   if [[ $1 == 'start' ]]; then
     echo "Starting services tor, squid and privoxy"
     service tor $1
-    squid3 $1
+    service squid3 $1
     service privoxy $1
   fi
 }
@@ -61,8 +61,7 @@ function services() {
 ########Tor config#########
 
 function config_tor() {
-  #Goto tor dir and rename original torrc file
-  #Uncomment after testing
+  #Backup original
   mv /etc/tor/torrc /tmp/torrc.bak
 
   #Tor config file generation
@@ -108,7 +107,7 @@ function create_tor_libs() {
 
 function replace_tor_init() {
   #Make backup copy of original file just in case
-  cp /etc/init.d/tor /tmp/tor_init.d.orig
+  cp /etc/init.d/tor /etc/init.d/tor.bak
   #Replace contents of file
   cat res/tor.txt > /etc/init.d/tor
 }
@@ -159,7 +158,7 @@ function create_privoxy_libs() {
 
 function replace_privoxy_init() {
   #Make backup copy of original file just in case
-  cp /etc/init.d/privoxy privoxy.orig
+  cp /etc/init.d/privoxy /etc/init.d/privoxy.bak
   #Replace contents of file
   cat res/privoxy.txt > /etc/init.d/privoxy
 }
@@ -169,65 +168,9 @@ function replace_privoxy_init() {
 
 function config_squid() {
 
-mv /etc/squid3/squid.conf /tmp/squid.bak
-
-echo -e "acl all src all
-acl manager proto cache_object
-acl localhost src 127.0.0.1/32
-acl home_network src 192.168.0.0/24
-acl to_localhost dst 127.0.0.0/8
-acl SSL_ports port 443
-acl Safe_ports port 80 # http
-acl Safe_ports port 21 # ftp
-acl Safe_ports port 443 # https
-acl Safe_ports port 70 # gopher
-acl Safe_ports port 210 # wais
-acl Safe_ports port 1025-65535 # unregistered ports
-acl Safe_ports port 280 # http-mgmt
-acl Safe_ports port 488 # gss-http
-acl Safe_ports port 591 # filemaker
-acl Safe_ports port 777 # multiling http
-acl Safe_ports port 901 # SWAT
-acl purge method PURGE
-acl CONNECT method CONNECT
-http_access allow home_network
-http_access allow manager localhost
-http_access deny manager
-http_access allow purge localhost
-http_access deny purge
-http_access deny !Safe_ports
-http_access deny CONNECT !SSL_ports
-acl malware_domains url_regex '/etc/squid3/Malware-domains.txt'
-http_access deny malware_domains
-http_access allow localhost
-http_access deny all
-icp_access deny all
-http_port 8080
-icp_port 0
-hierarchy_stoplist cgi-bin ?
-refresh_pattern ^ftp: 1440 20% 10080
-refresh_pattern ^gopher: 1440 0% 1440
-refresh_pattern -i (/cgi-bin/|\?) 0 0% 0
-refresh_pattern . 0 20% 4320
-cache_peer localhost parent 8118 0 round-robin no-query
-cache_peer localhost2 parent 8129 0 round-robin no-query
-cache_peer localhost3 parent 8230 0 round-robin no-query
-cache_peer localhost4 parent 8321 0 round-robin no-query
-cache_peer localhost5 parent 8421 0 round-robin no-query
-cache_peer localhost6 parent 8522 0 round-robin no-query
-cache_peer localhost7 parent 8623 0 round-robin no-query
-cache_peer localhost8 parent 8724 0 round-robin no-query
-never_direct allow all
-always_direct deny all
-acl apache rep_header Server ^Apache
-broken_vary_encoding allow apache
-forwarded_for off
-coredump_dir /home/squid-cache
-cache_dir ufs /home/squid-cache 20000 16 256
-pid_filename /var/run/squid-in.pid
-access_log /var/log/squid/access.squid-in.log
-cache_store_log /var/log/squid/store.squid-in.log
-cache_log /var/log/squid/cache.squid-in.log" > /etc/squid3/squid.conf
+mv /etc/squid3/squid.conf /etc/squid3/squid.bak
+cp res/squid.conf /etc/squid3/squid.conf
+chown root.root /etc/squid3/squid.conf
 }
 
 function squid_cache() {
@@ -252,7 +195,6 @@ echo -e "127.0.0.1 localhost
 #######Malware domains#######
 function malware() {
   touch /etc/squid3/Malware-domains.txt
-  tar -xzvf update-domains.tar.gz -C /usr/local/bin
   cp res/ml.py /usr/local/bin/
   cp res/update-domains.sh /usr/local/bin/
   chmod +x /usr/local/bin/update-domains.sh
