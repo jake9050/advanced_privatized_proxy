@@ -3,12 +3,26 @@
 ###This script will setup the squid/privoxy/tor setup i found @
 #
 # http://mightycomputers.wordpress.com/2012/09/10/recently-i-foun/
-#
-# Please read the article and make a backup of your system befor running
+# Please read the article and make a backup of your system before running
 # this script.
 #
-# Make sure you change the ip address for your local network in the squid.conf
-# settings to suit your local config
+# Basically it sets up one squid instance with 8 privoxy and tor workers to
+# speed up connection times.
+#
+# Diagram:
+#
+#             | privoxy1 --- tor1 ---|
+#             | privoxy2 --- tor2 ---|
+#             | privoxy3 --- tor3 ---|
+#  Squid -----| privoxy4 --- tor4 ---|----WWW
+#             | privoxy5 --- tor5 ---|
+#             | privoxy6 --- tor6 ---|
+#             | privoxy7 --- tor7 ---|
+#             | privoxy8 --- tor8 ---|
+#
+#
+# For ez deployment make sure you change the ip address for your local network
+# in the res/squid.conf settings file to suit your local config before running this script.
 #
 # Written and tesrted on Ubuntu server 12.04 LTS
 # Does not work out of the box for 14.04!!
@@ -26,6 +40,22 @@
 # 3 - Remove the http_proxy from the env
 #
 # unset http_proxy
+#
+#
+# Bonus points: Automate the update-domains.sh script to update the file
+# holding the ip's/domains to be blocked by squid by adding it to cron.
+# This script makes a copy of the scripts needed to these paths:
+#
+#  /usr/local/bin/my.pl - reads the ip's/domainnames from webservice
+#  /usr/local/bin/update-domains.sh - uses my.pl to generate the file
+#  /etc/squid3/Malware-domains.txt
+#
+#
+# Should you find bugs/general weirdness feel free to contact me
+# mail: jan.duprez@gmail.com
+# github: https://github.com/jake9050
+#
+# Enjoy your anonimized/filtered browsing experience!
 
 
 
@@ -44,16 +74,16 @@ function services() {
   if [[ $1 == 'stop' ]]; then
     #stop services so we can edit configs safely
     echo "Stopping services tor, squid and privoxy"
-    service tor $1
     service squid3 $1
     service privoxy $1
+    service tor $1
   fi
 
   if [[ $1 == 'start' ]]; then
     echo "Starting services tor, squid and privoxy"
-    service tor $1
     service squid3 $1
     service privoxy $1
+    service tor $1
   fi
 }
 
@@ -79,7 +109,7 @@ KeepalivePeriod 60
 NewCircuitPeriod 15"  > torrc-$COUNT
 
   if [[ $COUNT -eq 1 ]]; then
-    echo -e "SocksPort 9050 # what port to open for local application connections
+    echo -e "SocksPort 9050 # port to open for local application connections
 DataDirectory /var/lib/tor$COUNT
 PidFile /var/run/tor/tor-$COUNT.pid" >> torrc-$COUNT
   fi
@@ -87,7 +117,7 @@ PidFile /var/run/tor/tor-$COUNT.pid" >> torrc-$COUNT
   if [[ $COUNT -gt 1 ]]; then
     VAR=$(($COUNT-1))
     PORT=9$VAR\50
-    echo -e "SocksPort $PORT # what port to open for local application connections
+    echo -e "SocksPort $PORT # port to open for local application connections
 DataDirectory /var/lib/tor$COUNT
 PidFile /var/run/tor/tor-$COUNT.pid" >> torrc-$COUNT
   fi
@@ -178,21 +208,30 @@ function squid_cache() {
 }
 
 
-######Hosts file setup#######
+###### Hosts file setup #######
+#
+# Makes backup to /etc/hosts.bak before manipulating
+# Checks if entries for localhost2 to localhost8 are present
+# and adds them if not found.
 
 function hosts() {
-echo -e "127.0.0.1 localhost
-127.0.0.1 localhost2
-127.0.0.1 localhost3
-127.0.0.1 localhost4
-127.0.0.1 localhost5
-127.0.0.1 localhost6
-127.0.0.1 localhost7
-127.0.0.1 localhost8" >> /etc/hosts
+  cp $1 $1.bak
+  for i in {2..8}; do
+  res=$(grep -E localhost$i $1 | awk '{print $2}')
+    if [[ $res == "localhost$i" ]]; then
+      echo "Entry for localhost$i found, not adding it again"
+    else
+      echo "No entry for localhost$i found, adding it now"
+      echo "localhost$i" >> $1
+    fi
+  done
 }
 
-
 #######Malware domains#######
+#
+# Run the scripts that fetch the known bad domains from webservice
+# for use in squid acl filtering
+
 function malware() {
   touch /etc/squid3/Malware-domains.txt
   cp res/ml.py /usr/local/bin/
@@ -202,30 +241,49 @@ function malware() {
 }
 
 
-###Start calling the functions
+### Go! ###
+
+# Update apt & install packages
 apt_install
 
-###Stop the services after installing (they autorun on Ubuntu)
+# Stop the services after installing (they autorun on Ubuntu)
 services stop
 
-###Tor setup
+# Tor config
+echo "Configuring tor workers"
 config_tor
 create_tor_libs
 replace_tor_init
 
-###Privoxy config
+# Privoxy config
+echo "Congiguring privoxy workers"
 config_privoxy
 create_privoxy_libs
 replace_privoxy_init
 
-###Squid config
+# Squid config
+echo "Configuring squid"
 config_squid
 squid_cache
 
-###Hosts entries
-hosts
+# Hosts entries
+echo "Configuring /etc/hosts"
+hosts /etc/hosts
 
-#Create the malwaredomains file
+# Create the malwaredomains file for squid filtering
+echo "Creating Malware-domains.txt file in /etc/squid3/
 malware
 
+# Run all services
+echo "Config work done, restarting all services"
 services start
+
+echo -e "\nAll Done - you should now be able to test the setup\n"
+echo "Execute these commands and check if the ip returned changes on each request"
+echo "1 - Register the proxy in your session env"
+ip=$(ifconfig | grep 'inet addr' | head -n1 | awk '{print $2}' | cut -d: -f2)
+echo "export http_proxy='http://$ip:3400'"
+echo "2 - Request your ip from checkip.dyndns.org"
+echo -e "wget -q -O - checkip.dyndns.org | sed -e 's/.*Current IP Address: //' -e 's/<.*$//'"
+echo "3 - Optional - remove the proxy from your session env"
+echo "unset http_proxy"
