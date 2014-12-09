@@ -19,7 +19,7 @@ This script will setup the squid/privoxy/tor setup i found @
              | privoxy1 --- tor1 ---|
              | privoxy2 --- tor2 ---|
              | privoxy3 --- tor3 ---|
-  Squid -----| privoxy4 --- tor4 ---|----WWW
+ Squid ------| privoxy4 --- tor4 ---|----WWW
              | privoxy5 --- tor5 ---|
              | privoxy6 --- tor6 ---|
              | privoxy7 --- tor7 ---|
