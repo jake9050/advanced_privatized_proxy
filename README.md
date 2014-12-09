@@ -36,9 +36,9 @@ This script will setup the squid/privoxy/tor setup i found @
 
  1 - Register the proxy in your session env
 
- export http_proxy='http://ip.of.your.proxy:3400
+ export http_proxy='http://ip.of.your.proxy:3400'
 
- 2 - Query for your ip a few times, result should be a differebt one each time
+ 2 - Query for your ip a few times, result should be a different one each time
 
  wget -q -O - checkip.dyndns.org | sed -e 's/.*Current IP Address: //' -e 's/<.*$//'
 
