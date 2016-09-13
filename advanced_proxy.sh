@@ -271,7 +271,7 @@ echo "Configuring /etc/hosts"
 hosts /etc/hosts
 
 # Create the malwaredomains file for squid filtering
-echo "Creating Malware-domains.txt file in /etc/squid3/
+echo "Creating Malware-domains.txt file in /etc/squid3/"
 malware
 
 # Run all services
